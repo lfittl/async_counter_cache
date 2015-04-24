@@ -16,12 +16,14 @@ module AsyncCounterCache
         return unless counter_name.present?
 
         model.after_commit do
+          next if self.destroyed?
           CounterUpdateWorker.perform_later(self, counter_name.to_s, reflection.name.to_s)
         end
 
         if reflection.has_inverse?
           reflection.klass.after_commit do
             record = self.public_send(reflection.inverse_of.name)
+            next if record.destroyed?
             CounterUpdateWorker.perform_later(record, counter_name.to_s, reflection.name.to_s)
           end
         end
